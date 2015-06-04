@@ -18,6 +18,12 @@ public class Message {
     private boolean preserveRecipients;
     private boolean trackOpens;
     private boolean trackClicks;
+    private Object headers;
+    private boolean important;
+    private boolean autoText;
+    private boolean autoHtml;
+    private boolean viewContentLink;
+    private List<Image> images;
 
     public Message() {
     }
@@ -33,6 +39,13 @@ public class Message {
             to = new ArrayList<>();
         }
         to.add(recipient);
+    }
+
+    public void addImage(final Image image) {
+        if (images == null) {
+            images = new ArrayList<>();
+        }
+        images.add(image);
     }
 
     public String getSubject() {
@@ -111,4 +124,56 @@ public class Message {
     public void setTrackClicks(boolean trackClicks) {
         this.trackClicks = trackClicks;
     }
+
+    public Object getHeaders() {
+        return headers;
+    }
+
+    public void setHeaders(Object headers) {
+        this.headers = headers;
+    }
+
+    public boolean isImportant() {
+        return important;
+    }
+
+    public void setImportant(boolean important) {
+        this.important = important;
+    }
+
+    @JsonProperty("auto_text")
+    public boolean isAutoText() {
+        return autoText;
+    }
+
+    public void setAutoText(boolean autoText) {
+        this.autoText = autoText;
+    }
+
+    @JsonProperty("auto_html")
+    public boolean isAutoHtml() {
+        return autoHtml;
+    }
+
+    public void setAutoHtml(boolean autoHtml) {
+        this.autoHtml = autoHtml;
+    }
+
+    @JsonProperty("view_content_link")
+    public boolean isViewContentLink() {
+        return viewContentLink;
+    }
+
+    public void setViewContentLink(boolean viewContentLink) {
+        this.viewContentLink = viewContentLink;
+    }
+
+    public List<Image> getImages() {
+        return images;
+    }
+
+    public void setImages(List<Image> images) {
+        this.images = images;
+    }
+
 }

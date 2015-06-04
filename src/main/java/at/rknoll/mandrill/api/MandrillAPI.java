@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.http.HttpResponse;
+import org.apache.http.HttpStatus;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
@@ -57,7 +58,14 @@ public class MandrillAPI {
             httpPost.setHeader("Content-type", "application/json");
 
             final HttpResponse response = client.execute(httpPost);
-            result.complete(EntityUtils.toString(response.getEntity()));
+            int statusCode = response.getStatusLine().getStatusCode();
+            String responseContent = EntityUtils.toString(response.getEntity());
+
+            if (statusCode != HttpStatus.SC_OK) {
+                result.completeExceptionally(new MandrillException(responseContent));
+            } else {
+                result.complete(responseContent);
+            }
         } catch (Throwable e) {
             result.completeExceptionally(e);
         }
