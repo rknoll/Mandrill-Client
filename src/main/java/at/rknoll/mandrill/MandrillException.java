@@ -1,4 +1,4 @@
-package at.rknoll.mandrill.api;
+package at.rknoll.mandrill;
 
 /**
  * Created by rknoll on 04/06/15.
