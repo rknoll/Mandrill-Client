@@ -1,5 +1,6 @@
 package at.rknoll.mandrill;
 
+import at.rknoll.mandrill.response.Reject;
 import at.rknoll.mandrill.response.UsersInfo;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpStatus;
@@ -68,4 +69,11 @@ public class MandrillAPITest {
         final UsersInfo result = api.users().info().execute();
     }
 
+    @Test
+    public void rejectsTest() throws MandrillException {
+        mockResponse("[{\"email\":\"test\"}]");
+        final Reject[] rejects = api.rejects().list().setIncludeExpired(true).execute();
+        assertEquals(1, rejects.length);
+        assertEquals("test", rejects[0].getEmail());
+    }
 }

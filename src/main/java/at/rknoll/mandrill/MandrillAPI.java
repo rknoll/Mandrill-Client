@@ -1,6 +1,7 @@
 package at.rknoll.mandrill;
 
 import at.rknoll.mandrill.impl.messages.Messages;
+import at.rknoll.mandrill.impl.rejects.Rejects;
 import at.rknoll.mandrill.impl.senders.Senders;
 import at.rknoll.mandrill.impl.templates.Templates;
 import at.rknoll.mandrill.impl.users.Users;
@@ -21,6 +22,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -56,6 +58,7 @@ public class MandrillAPI {
         this.mapper = new ObjectMapper();
         this.mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
         this.mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        this.mapper.setDateFormat(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss"));
         if (client != null) {
             this.client = client;
         } else {
@@ -139,5 +142,9 @@ public class MandrillAPI {
 
     public Templates templates() {
         return new Templates(this);
+    }
+
+    public Rejects rejects() {
+        return new Rejects(this);
     }
 }
