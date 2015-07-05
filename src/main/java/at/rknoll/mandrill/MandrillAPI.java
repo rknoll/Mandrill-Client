@@ -8,17 +8,21 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
-import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.util.EntityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 
@@ -26,83 +30,114 @@ import java.util.concurrent.Future;
  * Created by rknoll on 04/06/15.
  */
 public class MandrillAPI {
-	public static final String DEFAULT_BASE_URL = "https://mandrillapp.com/api/1.0";
+    public static final String DEFAULT_BASE_URL = "https://mandrillapp.com/api/1.0";
 
-	private static final Logger LOG = LoggerFactory.getLogger(MandrillAPI.class);
+    private static final Logger LOG = LoggerFactory.getLogger(MandrillAPI.class);
 
-	private final String key;
-	private final String baseURL;
-	private final HttpClient client;
-	private final ObjectMapper mapper;
+    private final List<MandrillExecuteListener> listeners;
 
-	public MandrillAPI(final String key) {
-		this(key, null);
-	}
+    private final String key;
+    private final String baseURL;
+    private final CloseableHttpClient client;
+    private final ObjectMapper mapper;
 
-	public MandrillAPI(final String key, final String baseURL) {
-		this(key, baseURL, HttpClients.createDefault());
-	}
+    public MandrillAPI(final String key) {
+        this(key, null, null);
+    }
 
-	public MandrillAPI(final String key, final String baseURL, final HttpClient client) {
-		this.key = key;
-		this.baseURL = baseURL != null ? baseURL : DEFAULT_BASE_URL;
-		this.client = client;
-		this.mapper = new ObjectMapper();
-		this.mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
-		this.mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-	}
+    public MandrillAPI(final String key, final String baseURL) {
+        this(key, baseURL, null);
+    }
 
-	public <T> Future<T> execute(final MandrillRequest request, Class<T> clazz) {
-		final CompletableFuture<T> result = new CompletableFuture<>();
-		CompletableFuture.runAsync(() -> execute(request, result, clazz));
-		return result;
-	}
+    public MandrillAPI(final String key, final String baseURL, final CloseableHttpClient client) {
+        this.key = key;
+        this.baseURL = baseURL != null ? baseURL : DEFAULT_BASE_URL;
+        this.listeners = new ArrayList<>();
+        this.mapper = new ObjectMapper();
+        this.mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
+        this.mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        if (client != null) {
+            this.client = client;
+        } else {
+            final PoolingHttpClientConnectionManager connManager = new PoolingHttpClientConnectionManager();
+            connManager.setMaxTotal(100);
+            connManager.setDefaultMaxPerRoute(50);
+            this.client = HttpClients.custom().setConnectionManager(connManager).build();
+        }
+    }
 
-	private <T> void execute(final MandrillRequest request, final CompletableFuture<T> result, Class<T> clazz) {
-		try {
-			final HttpPost httpPost = new HttpPost(baseURL + request.getUrl());
+    public void addListener(final MandrillExecuteListener listener) {
+        listeners.add(listener);
+    }
 
-			final ObjectNode requestTree = mapper.valueToTree(request);
-			requestTree.put("key", key);
+    public void removeListener(final MandrillExecuteListener listener) {
+        listeners.remove(listener);
+    }
 
-			httpPost.setEntity(new StringEntity(requestTree.toString(),
-					ContentType.create("application/json", "utf-8")));
-			httpPost.setHeader("Accept", "application/json;charset=utf-8");
-			httpPost.setHeader("Content-type", "application/json;charset=utf-8");
+    public <T> Future<T> execute(final MandrillRequest request, Class<T> clazz) {
+        final CompletableFuture<T> result = new CompletableFuture<>();
+        CompletableFuture.runAsync(() -> execute(request, result, clazz));
+        return result;
+    }
 
-			final HttpResponse response = client.execute(httpPost);
-			int statusCode = response.getStatusLine().getStatusCode();
-			String responseContent = EntityUtils.toString(response.getEntity());
+    private <T> void execute(final MandrillRequest request, final CompletableFuture<T> result, Class<T> clazz) {
+        CloseableHttpResponse response = null;
+        try {
+            final HttpPost httpPost = new HttpPost(baseURL + request.getUrl());
 
-			if (statusCode != HttpStatus.SC_OK) {
-				LOG.error("Mandrill Response: {}", responseContent);
-				result.completeExceptionally(new MandrillException(responseContent));
-			} else {
-				LOG.debug("Mandrill Response: {}", responseContent);
-				if (clazz.equals(String.class)) {
-					result.complete(clazz.cast(responseContent));
-				} else {
-					result.complete(mapper.readValue(responseContent, clazz));
-				}
-			}
-		} catch (Throwable e) {
-			result.completeExceptionally(e);
-		}
-	}
+            final ObjectNode requestTree = mapper.valueToTree(request);
+            requestTree.put("key", key);
 
-	public Messages messages() {
-		return new Messages(this);
-	}
+            httpPost.setEntity(new StringEntity(requestTree.toString(),
+                    ContentType.create("application/json", "utf-8")));
+            httpPost.setHeader("Accept", "application/json;charset=utf-8");
+            httpPost.setHeader("Content-type", "application/json;charset=utf-8");
 
-	public Users users() {
-		return new Users(this);
-	}
+            response = client.execute(httpPost);
+            int statusCode = response.getStatusLine().getStatusCode();
+            String responseContent = EntityUtils.toString(response.getEntity());
 
-	public Senders senders() {
-		return new Senders(this);
-	}
+            if (statusCode != HttpStatus.SC_OK) {
+                LOG.error("Mandrill Response: {}", responseContent);
+                result.completeExceptionally(new MandrillException(responseContent));
+            } else {
+                LOG.debug("Mandrill Response: {}", responseContent);
+                if (clazz.equals(String.class)) {
+                    result.complete(clazz.cast(responseContent));
+                } else {
+                    result.complete(mapper.readValue(responseContent, clazz));
+                }
+            }
+        } catch (Throwable e) {
+            result.completeExceptionally(e);
+        } finally {
+            if (response != null) {
+                try {
+                    response.close();
+                } catch (IOException ignored) {
+                }
+            }
+        }
 
-	public Templates templates() {
-		return new Templates(this);
-	}
+        // call listeners
+        for (final MandrillExecuteListener listener : listeners) {
+            listener.executed(request);
+        }
+    }
+
+    public Messages messages() {
+        return new Messages(this);
+    }
+
+    public Users users() {
+        return new Users(this);
+    }
+
+    public Senders senders() {
+        return new Senders(this);
+    }
+
+    public Templates templates() {
+        return new Templates(this);
+    }
 }

@@ -11,55 +11,55 @@ import java.io.InputStream;
  * Created by rknoll on 04/06/15.
  */
 public class Image {
-	private String type;
-	private String name;
-	private String content;
+    private String type;
+    private String name;
+    private String content;
 
-	public Image() {
-	}
+    public Image() {
+    }
 
-	public Image(final String name, final String type, final String content) {
-		this.name = name;
-		this.type = type;
-		this.content = content;
-	}
+    public Image(final String name, final String type, final String content) {
+        this.name = name;
+        this.type = type;
+        this.content = content;
+    }
 
-	public Image(final String name, final String type, final InputStream content) throws IOException {
-		this.name = name;
-		this.type = type;
+    public Image(final String name, final String type, final InputStream content) throws IOException {
+        this.name = name;
+        this.type = type;
 
-		// convert input stream to base64 string
-		final ByteArrayOutputStream byteArrayOutput = new ByteArrayOutputStream();
-		final Base64OutputStream base64Output = new Base64OutputStream(byteArrayOutput);
-		IOUtils.copy(content, base64Output);
+        // convert input stream to base64 string
+        final ByteArrayOutputStream byteArrayOutput = new ByteArrayOutputStream();
+        final Base64OutputStream base64Output = new Base64OutputStream(byteArrayOutput);
+        IOUtils.copy(content, base64Output);
 
-		this.content = new String(byteArrayOutput.toByteArray());
-	}
+        this.content = new String(byteArrayOutput.toByteArray());
+    }
 
-	public String getType() {
-		return type;
-	}
+    public String getType() {
+        return type;
+    }
 
-	public Image setType(String type) {
-		this.type = type;
-		return this;
-	}
+    public Image setType(String type) {
+        this.type = type;
+        return this;
+    }
 
-	public String getName() {
-		return name;
-	}
+    public String getName() {
+        return name;
+    }
 
-	public Image setName(String name) {
-		this.name = name;
-		return this;
-	}
+    public Image setName(String name) {
+        this.name = name;
+        return this;
+    }
 
-	public String getContent() {
-		return content;
-	}
+    public String getContent() {
+        return content;
+    }
 
-	public Image setContent(String content) {
-		this.content = content;
-		return this;
-	}
+    public Image setContent(String content) {
+        this.content = content;
+        return this;
+    }
 }
